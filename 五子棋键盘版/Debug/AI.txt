@@ -1,0 +1,422 @@
+/*这份代码经源码格式软件格式化过
+     yang_hx@neusoft.com      */
+// 五子棋人机对战
+// 电脑方设计思路：在能下棋的空位置中，假设电脑和玩家下在此处，分别算出各个空位置的分数，并找出最大值
+// 如果最大值是玩家下的，那么电脑就“抢”他的位置，即做到了“防守”
+// 如果最大值是电脑下的，那就让电脑在此处下，即做到了“进攻”
+
+
+// 图形库头文件
+// 控制台输入输出,包含getch()函数
+#include<graphics.h>
+#include<conio.h>
+#include<time.h>
+#include<stdlib.h>
+
+
+void start();
+// 开始界面
+void chessboard();
+// 布置棋盘
+int score(int m, int n, int k);
+// 打分函数
+int judge(int m, int n, int k);
+// 判断输赢
+
+
+int a[16][16];
+// 定义全局二维数组，作为虚拟棋盘，记录棋盘情况：0 代表空格 1 代表人下的棋 2 代表电脑下的棋
+void main()
+{
+    srand((unsigned)time(NULL));
+    // 随机种子
+    int score_p[16][16], score_c[16][16];
+    int k, i, j, s, t, x = 0, max, p ;
+    MOUSEMSG m ;
+    start();
+    for(;;)
+    {
+        k = 1 ;
+        for(i = 1; i < 16; i++)
+        {
+            for(j = 1; j < 16; j++)
+                a[i][j] = 0 ;
+        }
+        chessboard();
+        // 获取玩家选择，是否先下
+        HWND wnd = GetHWnd();
+        if(MessageBox(wnd, _T("大神，你要让电脑先下吗？"), _T("提醒"), MB_OKCANCEL | MB_ICONQUESTION) == IDOK)
+        {
+            i = rand() % 6 + 6 ;
+            //在6-12之间，找一个随机数作为电脑下棋的X坐标
+            j = rand() % 6 + 6 ;
+            //在6-12之间，找一个随机数作为电脑下棋的Y坐标
+            a[i][j] = 2 ;
+            setfillcolor(BLACK);
+            fillcircle(50 * i, 50 * j, 20);
+        }
+        for(;;)
+        {
+            for(; p != 1;)
+            {
+                // 玩家下棋，获取鼠标信息
+                m = GetMouseMsg();
+                switch(m.uMsg)
+                {
+                case WM_LBUTTONDOWN :
+                {
+                    for(i = 50; i <= 750; i = i + 50)
+                    {
+                        for(j = 50; j <= 750; j = j + 50)
+                        {
+                            // 判断是否能下及下好位置
+                            if(m.x < i + 10 && m.x > i - 10 && m.y < j + 10 && m.y > j - 10 && a[i / 50][j / 50] == 0)
+                            {
+                                setfillcolor(WHITE);
+                                fillcircle(i, j, 20);
+                                p = 1 ;
+                                break ;
+                            }
+                        }
+                        if(p == 1)
+                        {
+                            break ;
+                        }
+                    }
+                }
+                }
+            }
+            p = 0 ;
+            a[i / 50][j / 50] = 1 ;
+            x = judge(i / 50, j / 50, k);
+            // 判断输赢
+            if(x > 4)
+            {
+                settextcolor(YELLOW);
+                settextstyle(30, 0, _T("方正舒体"));
+                outtextxy(200, 0, "---你赢啦按任意键继续---");
+                getch();
+                break ;
+            }
+            k = -k ;
+            // 初始化分数score_c[i][j]:电脑分数 score_p[i][j]:玩家分数
+            for(i = 1; i < 16; i++)
+            {
+                for(j = 1; j < 16; j++)
+                {
+                    score_c[i][j] = 0 ;
+                    score_p[i][j] = 0 ;
+                }
+            }
+            for(i = 1; i < 16; i++)
+            {
+                for(j = 1; j < 16; j++)
+                {
+                    if(a[i][j] == 0)
+                    {
+                        a[i][j] = 1 ;
+                        x = score(i, j, 1);
+                        score_p[i][j] += x ;
+                        // 记录如果玩家下在此处，得到多少分
+                        a[i][j] = 2 ;
+                        x = score(i, j, -1);
+                        score_c[i][j] += x ;
+                        // 记录如果电脑下在此处，得到多少分
+                        a[i][j] = 0 ;
+                    }
+                }
+            }
+            // 找到能下棋的空位置中，假设电脑和人下在此处，得到分数中最大值
+            for(s = t = i = 1, max = score_c[1][1]; i < 16; i++)
+            {
+                for(j = 1; j < 16; j++)
+                {
+                    if(score_c[i][j] > max)
+                    {
+                        max = score_c[i][j];
+                        s = i ;
+                        t = j ;
+                    }
+                }
+            }
+            for(i = 1; i < 16; i++)
+            {
+                for(j = 1; j < 16; j++)
+                {
+                    if(score_p[i][j] > max)
+                    {
+                        max = score_p[i][j];
+                        s = i ;
+                        t = j ;
+                    }
+                }
+            }
+            a[s][t] = 2 ;
+            // 在最高分处落棋
+            setfillcolor(BLACK);
+            fillcircle(s * 50, t * 50, 20);
+            x = judge(s, t, k);
+            if(x > 4)
+            {
+                settextcolor(YELLOW);
+                settextstyle(30, 0, _T("方正舒体"));
+                outtextxy(200, 0, "---你输啦按任意键继续---");
+                getch();
+                break ;
+            }
+            k = -k ;
+        }
+    }
+}
+void start()
+{
+    initgraph(900, 800);
+    setbkcolor(WHITE);
+    cleardevice();
+    settextcolor(RED);
+    settextstyle(60, 0, _T("方正舒体"));
+    outtextxy(220, 100, "五子棋人机对战");
+    outtextxy(500, 200, " ---安然");
+    settextstyle(30, 0, _T("宋体"));
+    outtextxy(300, 300, "按任意键开始游戏");
+    getch();
+}
+void chessboard()
+{
+    int i ;
+    initgraph(900, 800);
+    setbkcolor(BROWN);
+    cleardevice();
+    settextcolor(RED);
+    settextstyle(120, 0, _T("方正舒体"));
+    outtextxy(780, 80, "五");
+    outtextxy(780, 200, "子");
+    outtextxy(780, 320, "棋");
+    settextstyle(30, 0, _T("方正舒体"));
+    outtextxy(780, 450, "-安然");
+    for(i = 50; i <= 750; i = i + 50)
+    {
+        setlinecolor(BLACK);
+        line(50, i, 750, i);
+        line(i, 50, i, 750);
+    }
+}
+int judge(int m, int n, int k)
+{
+    int s, i, j, p = 0, q = 0, x = 0, shu, heng, zuoxie, youxie ;
+    if(k == 1)
+        s = 1 ;
+    else
+        s = 2 ;
+    for(i = m; i < m + 5, i < 16; i++)
+    {
+        if(a[i][n] != s)
+            break ;
+        else
+            p++;
+    }
+    for(i = m - 1; i > m - 5, i > 0; i--)
+    {
+        if(a[i][n] != s)
+            break ;
+        else
+            q++;
+    }
+    heng = p + q ;
+    for(j = n, p = 0; j < n + 5, j < 16; j++)
+    {
+        if(a[m][j] != s)
+            break ;
+        else
+            p++;
+    }
+    for(j = n - 1, q = 0; j > n - 5, j > 0; j--)
+    {
+        if(a[m][j] != s)
+            break ;
+        else
+            q++;
+    }
+    shu = p + q ;
+    for(i = m, j = n, p = 0; i < 16, i < m + 5, j < 16; i++, j++)
+    {
+        if(a[i][j] != s)
+            break ;
+        else
+            p++;
+    }
+    for(i = m - 1, j = n - 1, q = 0; i > 0, i > m - 5, j > 0; i--, j--)
+    {
+        if(a[i][j] != s)
+            break ;
+        else
+            q++;
+    }
+    zuoxie = p + q ;
+    for(i = m, j = n, p = 0; i > 0, i > m - 5, j < 16; i--, j++)
+    {
+        if(a[i][j] != s)
+            break ;
+        else
+            p++;
+    }
+    for(i = m + 1, j = n - 1, q = 0; i < 16, i < m + 5, j > 0; i++, j--)
+    {
+        if(a[i][j] != s)
+            break ;
+        else
+            q++;
+    }
+    youxie = p + q ;
+    x = heng ;
+    if(shu > x)
+        x = shu ;
+    if(zuoxie > x)
+        x = zuoxie ;
+    if(youxie > x)
+        x = youxie ;
+    return x ;
+}
+int score(int m, int n, int k)
+{
+    int i, j, p = 0, q = 0, b[4] =
+    {
+        0
+    }
+    , x = 0, shu, heng, zuoxie, youxie ;
+    char s ;
+    if(k == 1)
+        s = 1 ;
+    else
+        s = 2 ;
+    for(i = m; i < m + 5, i < 16; i++)
+    {
+        if(a[i][n] != s)
+        {
+            if(a[i][n] == 0)
+            {
+                b[0]++;
+            }
+            break ;
+        }
+        else
+            p++;
+    }
+    for(i = m - 1; i > m - 5, i > 0; i--)
+    {
+        if(a[i][n] != s)
+        {
+            if(a[i][n] == 0)
+            {
+                b[0]++;
+            }
+            break ;
+        }
+        else
+            q++;
+    }
+    heng = p + q ;
+    for(j = n, p = 0; j < n + 5, j < 16; j++)
+    {
+        if(a[m][j] != s)
+        {
+            if(a[m][j] == 0)
+            {
+                b[1]++;
+            }
+            break ;
+        }
+        else
+            p++;
+    }
+    for(j = n - 1, q = 0; j > n - 5, j > 0; j--)
+    {
+        if(a[m][j] != s)
+        {
+            if(a[i][n] == 0)
+            {
+                b[1]++;
+            }
+            break ;
+        }
+        else
+            q++;
+    }
+    shu = p + q ;
+    for(i = m, j = n, p = 0; i < 16, i < m + 5, j < 16; i++, j++)
+    {
+        if(a[i][j] != s)
+        {
+            if(a[i][j] == 0)
+            {
+                b[2]++;
+            }
+            break ;
+        }
+        else
+            p++;
+    }
+    for(i = m - 1, j = n - 1, q = 0; i > 0, i > m - 5, j > 0; i--, j--)
+    {
+        if(a[i][j] != s)
+        {
+            if(a[i][j] == 0)
+            {
+                b[2]++;
+            }
+            break ;
+        }
+        else
+            q++;
+    }
+    zuoxie = p + q ;
+    for(i = m, j = n, p = 0; i > 0, i > m - 5, j < 16; i--, j++)
+    {
+        if(a[i][j] != s)
+        {
+            if(a[i][j] == 0)
+            {
+                b[3]++;
+            }
+            break ;
+        }
+        else
+            p++;
+    }
+    for(i = m + 1, j = n - 1, q = 0; i < 16, i < m + 5, j > 0; i++, j--)
+    {
+        if(a[i][j] != s)
+        {
+            if(a[i][j] == 0)
+            {
+                b[3]++;
+            }
+            break ;
+        }
+        else
+            q++;
+    }
+    youxie = p + q ;
+    if(heng > 4 || shu > 4 || zuoxie > 4 || youxie > 4)
+    {
+        x = 100 ;
+    }
+    else
+    {
+        for(i = 0; i < 4; i++)
+        {
+            if(b[i] == 0)
+            {
+                b[i] = -20 ;
+            }
+        }
+        x = heng + b[0];
+        if(shu + b[1] > x)
+            x = shu + b[1];
+        if(zuoxie + b[2] > x)
+            x = zuoxie + b[2];
+        if(youxie + b[3] > x)
+            x = youxie + b[3];
+    }
+    return x ;
+}
